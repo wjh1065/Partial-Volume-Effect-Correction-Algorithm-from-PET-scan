@@ -90,4 +90,8 @@ SPM을 통한 PVC 과정은 영상분할 작업 10분, GTM 방법 90분, MG 방�
 본 연구에서 제안한 방법은 영상분할 작업은 제외하고 GTM과 MG 방법을 딥러닝 알고리즘으로 대체함.  
 한 사람당 처리시간은 평균 5.4초로 SPM처리 보다 1100배가량 빠른 처리 속도를 보여줌.  
 
+### 발표
+
+[2021년 대한전자공학회 하계학술대회](https://drive.google.com/file/d/181J8tPRbROE7jTI31__zqpx7wGBPtypX/view?usp=sharing)
+[2021년 OHBM poster 발표](https://drive.google.com/file/d/1WxfQTBUNqNVi1C0ccTvI-YtAq4s6_uJc/view?usp=sharing)
 
