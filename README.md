@@ -92,6 +92,6 @@ SPM을 통한 PVC 과정은 영상분할 작업 10분, GTM 방법 90분, MG 방�
 
 ### 발표
 
-[2021년 대한전자공학회 하계학술대회](https://drive.google.com/file/d/181J8tPRbROE7jTI31__zqpx7wGBPtypX/view?usp=sharing)
-[2021년 OHBM poster 발표](https://drive.google.com/file/d/1WxfQTBUNqNVi1C0ccTvI-YtAq4s6_uJc/view?usp=sharing)
+[2021년 대한전자공학회 하계학술대회](https://drive.google.com/file/d/181J8tPRbROE7jTI31__zqpx7wGBPtypX/view?usp=sharing)  
+[2021년 OHBM poster 발표](https://drive.google.com/file/d/1WxfQTBUNqNVi1C0ccTvI-YtAq4s6_uJc/view?usp=sharing)  
 
