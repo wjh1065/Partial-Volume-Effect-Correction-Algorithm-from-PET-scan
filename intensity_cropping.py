@@ -11,11 +11,16 @@ def get_data_list_input(root):
         if i.startswith('ADNI'):
             print('------job Start------')
             data_path = os.path.join(root, i)
+            
+            # load Train data (rPET), Target data (PVC_rPET)
             subject_pvc_rPET = (data_path + '/pvc_rPET.nii.gz')
             subject_rPET = (data_path + '/gm_rPET.nii.gz')
-            print('subject : ', subject_pvc_rPET)
+            
+            # print('subject : ', subject_pvc_rPET)
             subject_img_header_pvc_rPET = nib.load(subject_pvc_rPET)
             subject_img_header_rPET = nib.load(subject_rPET)
+            
+            # for header data and raw data
             subject_img_pvc_rPET = subject_img_header_pvc_rPET.get_fdata()
             data_pvc_rPET = subject_img_header_pvc_rPET.get_fdata()
 
@@ -29,7 +34,7 @@ def get_data_list_input(root):
             #plt.tight_layout()
             #plt.show()
 
-            # step 1. calculate thr_triangle
+            # step 1. Cutting values [ for making 0% values ~ 99% values ]
             data_pvc_rPET = data_pvc_rPET[data_pvc_rPET > 0]
 
 
