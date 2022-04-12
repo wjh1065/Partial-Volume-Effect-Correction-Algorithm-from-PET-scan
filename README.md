@@ -1,101 +1,168 @@
-# 소개
-본 연구의 목표는 오랜 시간이 걸리는 기존의 PVC 과정을 딥러닝으로 대체하여 정확도를 유지하면서도 처리 시간을 단축하고자 함.  
+# Partial Volume Effect Correction Algorithm from PET scan
 
-# Partial volume Effect correction (PVC)
---- 설명 추가 ---  
+## 1. 추진배경 및 필요성
+
+- 추진배경
+  
+    알츠하이머성 치매(Alzheimer’s Disease, AD)가 유발되는 유력한 가설은 단백질 침착이 뇌 세포를 파괴하기 때문임. 즉 이러한 **아밀로이드 단백질 축적량**의 <u>정확한 측정</u>은 치매 발병의 조기예측에 있어서 매우 중요함. 아밀로이드 단백질의 축적량은 양성자 방출 단층 촬영(Positron Emission Tomography, PET)영상으로 측정이 가능함. 그러나 PET 영상의 낮은 해상도와 PET트레이서의 방사성으로 인해 영상이 흐려지는 현상이 발생하여 영상의 정확도가 저하됨. 이러한 현상을 Partial Volume Effect(PVE)라 부르는데, PET 영상의 질에 심각한 영향을 미치게 됨. 이와 같은 현상은 Partial Volume Effect Correction(PVC)이라고 불리는 보정 과정을 거쳐 개선시킬 수 있지만, 이러한 영상처리에는 시간이 많이 소요되는 단점이 있음.
+    
+- 연구 목표
+  
+    이 연구는 <u>오랜 시간이 걸리는 PVC 과정</u>을 *딥러닝* 알고리즘으로 대체하여 **정확도를 유지하면서도 처리 시간을 단축**하고자 하는 것임. 
+    
+    
+    
+    1. PET영상은 주입한 트레이서의 양, 시간 등에 따라서 영상의 강도(intensity)가 매우 달라지는 특성이 있어서 개인별 PET 영상에 대해서 <u>강도 자르기(intensity cropping)</u>을 시행함.
+    2. 학습에 사용한 딥러닝 모델은 3D-ResUnet이며, <u>패치 기반(patch-based)으로 변형하여 학습</u>함.
+    3. 학습 모델의 평가는 SSIM과 RMSE를 이용하였으며 이전의 선행연구가 없으므로, <u>비교할 기준모델(baseline model)</u>로는 SciPy 패키지의 선명화 효과 필터(sharpen filter)를 사용함.
+    
+    
+    
+    <u>심층학습을 활용한 PVC 처리의 경우 이전의 선행 연구가 없는 매우 도전적인 연구임.</u>
+    
+    
+    
+---
+
+## 2. 연구 결과
+
+- 데이터 셋
+  
+    본 연구에서 사용한 데이터는 알츠하이머 병 뇌 영상 데이터베이스(ADNI)로 부터 획득함.
+    
+    ADNI 데이터셋에서 694명의 3D-PET영상을 사용하였으며 이 중 **550명의 환자 영상을 <u>훈련 데이터</u>**로, **50명 환자 영상을 <u>검증 데이터</u>**로, 나머지 **94명을 <u>테스트 데이터</u>**로 설정하고 학습 및 실험을 진행함.
+    
+    (694, 160~256 x 192~288 x 160~288) : **694명의 영상 크기**
+    
+    (694, 1~1.25 x 0.92~1.25 x 0.923~1.2 mm<sup>3</sup>) : **694명의 복셀 사이즈**
+    
+    
+    
+- 데이터 전처리
+  
+    영상의 크기는 영상획득 프로토콜에 따라 조금씩 다른데, 이는 딥러닝 모델에 넣어주는데 있어서 제약이 됨. Statistical Parametric Mapping(SPM) 패키지를 이용하여 영상 데이터의 크기를 표준뇌 참조 영상과 같아지도록 Reslice하여 준비함.
+    
+    (표준뇌 영상 크기: 복셀 사이즈 1 x 1 x 1 mm<sup>3</sup>, 크기 256 x 256 x 256)
+    
+    (550, 256, 256, 256) : **Train data**
+    
+    (50, 256, 256 ,256) : **Val data**
+    
+    (94, 256, 256, 256) : **Test data**
+    
+    
+    PET영상은 주입한 트레이서의 양, 주입한 시간 등에 따라서 영상의 강도가 매우 달라지는 특성이 있음. PET영상의 복셀 값 분포를 0에서 1사이의 값(MinMaxScaler)으로 매핑하고, 강도 값(intensity)의 히스토그램을 분석하여 상위 99% 이상은 99%의 값으로 처리하는 **강도자르기(intensity cropping)**을 시행함[그림 1].
+    
+    <img src="https://user-images.githubusercontent.com/67947808/149298781-26cd4472-6ea9-4e7e-92d9-cbc0ce6a1d87.png" alt="스크린샷 2022-01-13 오후 6 01 49" style="zoom:60%;" />
+    
+    [그림 1] 특정 이미지의 (a) 원래 이미지의 복셀 값 범위, (b) intensity cropping을 실시하여 보정한 이미지의 복셀 값 범위
+    
+    <img src="https://user-images.githubusercontent.com/67947808/149298983-c23127a0-f3a9-4316-8394-819425e6fb43.png" alt="스크린샷 2022-01-13 오후 6 03 17" style="zoom:67%;" />
+    
+    [그림 2] 데이터 전처리 전체 흐름도
+    
+    
+    
+- 딥러닝 모델, 3D-ResUnet
+  
+    본 연구에서는 3D-ResUnet 모델을 패치 기반(patch-based)으로 변형하여 사용함.
+    
+    **Unet**은 입력과 출력 사이의 매핑을 학습하는 딥러닝 모델이며, 인코더와 디코더 사이에 추가 파라미터 없이 연결되는 <u>스킵연결(skip connection)</u>이 있음. 스킵연결은 디코딩 과정에서 인코딩 과정에서 만들어진 <u>특성맵을 활용하여 더 높은 선예도를 획득할 수 있도록 도와줌</u>. 일반적으로 학습 효과를 높이기 위해선 딥러닝 네트워크를 깊게 쌓아야 하는데, <u>층이 깊어질수록 그래디언트 소실 현상이 심해져서 학습을 방해할 수 있음</u>. **잔여블록**을 이용하면 이러한 학습을 가속화할 수 있을 뿐 아니라, 과적합을 피할 수 있음. 잔여블록은 입력 값을 출력 값에 더해주는 지름길연결(shortcut connection)을 하나 만들어주는 것임. 
+    
+    본 연구에서 사용한 3D-ResUnet은 3차원 합성곱신경망을 사용하는 Unet인 동시에, 잔여블록을 활용하여 성능을 개선한 모델이다.
+
+    <img src="https://user-images.githubusercontent.com/67947808/149299832-7265e9c6-8717-40ed-8d22-001089c6a974.png" alt="스크린샷 2022-01-13 오후 6 08 54" style="zoom:65%;" />
+    
+    [그림 3] 3D-ResUnet의 구조 도식화
+    
+    <img src="https://user-images.githubusercontent.com/67947808/149300182-c78df88d-9af1-4569-8e44-2a25ce8979f3.png" alt="스크린샷 2022-01-13 오후 6 10 53" style="zoom: 67%;" />
+    
+    [그림 4] 패치 기반 학습
+    
+    
+    
+    (550, 256, 256, 256, 1) -> (4400, 128, 128, 128, 1) : Train __*patch*__ data shape  
+    (50, 256, 256, 256, 1) -> (400, 128, 128, 128, 1)     : Validation __*patch*__ data shape  
+    (94, 256, 256, 256, 1) -> (752, 128, 128, 128, 1)     : Test __*patch*__ data shape   
 
 
-# 순서: 
-1. 데이터 셋 소개
-2. 데이터 전처리
-3. 딥러닝 모델, 3D-ResUnet
-4. 학습 방법
-5. 정량적 평가 방법
-6. 실험 결과 및 결론
+- 학습 방법 및 정량적 평가 방법
+  
+    `PVC 처리 전 PET영상 데이터`를 **입력 데이터**로 사용, `PVC 처리 후 PET영상 데이터`는 **정답 데이터**로 사용하여 학습을 진행함.
+    
+    <u>최소제곱에러(MSE)를 손실함수</u>로 사용하여, 입력/정답 데이터간의 차이를 줄이도록 함. 패치를 이용하여 한 사람의 영상을 8개의 패치로 나누고, 미니<u>배치의 크기(batch size)를 4</u>로 하였으며, 총 <u>300번의 에폭(epoch)</u>동안 학습을 진행함. <u>최적화 알고리즘은 Adam</u>을 사용함.
+    
+    > 모든 구현은 유닉스 상(Ubuntu 18.04.5 LTS)의 Python 버전 3.8.8에서 구글 텐서플로우 (TensorFlowTM) 버전 2.5.0, 케라스(Keras) 버전 2.5.0으로 구현되었다. 학습에 사용된 하드웨어 정보는 다음과 같다 (CPU: Intel [i7-6700@3.4GHz](mailto:i7-6700@3.4GHz), GPU: Nvidia RTX 3090 24GB, memory: 48GB).
+    
+    모델의 평가 방법은 정답 데이터와의 **유사성**을 비교하는 <u>구조적 유사 지수(SSIM)</u>와 정답 데이터간의 **오차율**을 확인하는 평균 제곱근 오차(RMSE)를 이용함.
+    
+    이전의 선행연구가 없으므로, 비교할 기준모델(baseline model)로는 SciPy 패키지의 <u>선명화 효과 필터(sharpen filter)</u>를 사용함. **Partial volume effect**라는 것이 단순한 *흐림(blur)*에 해당된다면, 선명도만 올라가면 PVC가 되는 것이라고 생각할 수 있음. 그러나, <u>PVC가 단순한 선명화 효과가 아니며</u>, 이를 보이기 위하여 이러한 비교대상을 선정함.
+    
+    
+    
+- 연구 결과
+  
+    그림 5는 <u>최종 모델의 학습 곡선</u>을 보여줌. 과적합을 막기 위해 검증데이터에서의 손실이 더 이상 증가하지 않는 정도에서 학습을 멈추었음.
+    
+    <img src="https://user-images.githubusercontent.com/67947808/149306183-ee73d427-774d-4b17-8e1e-9009bb52ad34.png" alt="스크린샷 2022-01-13 오후 6 46 55" style="zoom:75%;" />
+
+    [그림 5] ADNI 데이터에 대해 3D-ResUnet의 학습 및 검증 손실 그래프
+
+    <img src="https://user-images.githubusercontent.com/67947808/149306391-8a70fe17-1d69-42b6-9bf1-fc40c38b8af3.png" alt="스크린샷 2022-01-13 오후 6 48 08" style="zoom:85%;" />
+
+    [그림 6] 테스트 데이터에서의 모델 처리 결과 예시
+    
+    그림 6은 ADNI 테스트 데이터 첫번째 영상을 예시로 그린 것임. 선명화 효과 필터를 진행한 결과는 뇌 회백질의 모든 경계면에서 강도(intensity)가 진해져 있는데, PVC처리된 정답 영상을 보면, PVC는 모든 경계가 진해지지 않은 것을 볼 수 있음. <u>선명화 효과 필터의 결과는 오히려 노이즈가 더 증폭된 것처럼 보임</u>. 반면 3D-ResUnet의 결과 영상은 정답 영상과 마찬가지로 뇌의 경계면이 모두 다 붉게 변하지 않으며, 회백질 내부의 일부 부분의 강도만 조정된 것을 볼 수 있음. 즉, <u>선명화 효과 필터 처리와 PVC처리가 다른 과정이며 3D-ResUnet이 PVC과정을 학습하고 있다는 것을 의미함.</u>
+    
+    
+    
+    |     ADNI     |  Input   | Sharpen Filter | 3D-ResUnet |
+    | :----------: | :------: | :------------: | :--------: |
+    | average SSIM |  0.9831  |     0.9710     |   0.9948   |
+    | average RMSE | 18846.75 |    24192.54    |  12275.09  |
+
+    정량적 비교 결과, ADNI 데이터에서 선명화 효과 필터 대비 3D-ResUnet의 성능이 뛰어남. 
+    본 연구에서 제안한 딥러닝을 활용한 PVC 방법은 평균 SSIM이 0.9948으로 PVC 데이터와의 유사성이 99%이상으로 매우 높다.
+    
+    
+    
+---
+
+## 3. 결론 및 향후 연구 방향
+
+- 결론
+  
+    SPM을 통한 PVC과정은 영상분할 작업 10분, GTM 방법 90분, MG 방법 10분이 소요됨.
+    본 연구에서 제안한 방법은 영상분할 작업은 제외하고 GTM과 MG 방법을 딥러닝 알고리즘으로 대체함.
+    한 사람당 처리시간은 **평균 5.4초**로 SPM처리보다 <u>1100배 가량 빠른 처리 속도</u>를 보여줌.
+    
+- 연구 방향
+  
+    1. 추 후에 ADNI 영상 데이터와는 다른 상이한 영상 프로토콜을 가진 <u>타 병원 데이터</u>에서도 검증을 해볼 예정임. 타 병원 영상 데이터에도 PVC가 잘 처리 된다면 개발된 모델이 일반적인 영상처리 과정을 **대체가능한 툴박스**로서 활용가능한 것이라 생각됨.
+    
+    2. 기존 SPM의 PVC 과정에서 T1 자기공명영상은 영상분할(segmentation)을 통해 회백질 마스크를 생성하기 위해 필수적임. 본 연구에서는 회백질 영역을 추출하는 단계를 제외하고 GTM방법과 MG방법을 딥러닝 알고리즘으로 대체함. 향 후 연구방향으로는 PET영상에서 회백질 영역을 추출하는 모델을 학습하여, 모든 과정을 딥러닝으로 대체할 예정임.
+    
+    
+    
+---
+
+## 4. 연구결과 활용
+
+- 최근 전세계적으로 치매에 대한 관심이 매우 높음. 치매의 조기진단모델 개발을 위해서는 이러한 PET영상의 대량처리가 필수적임. 해당 모델을 통해 많은 양의 PET영상의 처리시간을 줄여 PET연구를 가속화하고, 치매극복에 기여할 수 있으리라 기대됨.
 
 
-## 1. 데이터 셋 소개
-본 연구에서 사용한 데이터는 알츠하이머 병 뇌 영상 데이터베이스(ADNI)로 부터 획득함.  
 
-ADNI 데이터셋에서 694명의 3D-PET영상을 사용하였으며 이 중 550명의 환자 영상을 훈련 데이터로, 50명 환자 영상을 검증 데이터로, 나머지 94명을 테스트 데이터로 설정하고 학습 및 실험을 진행함.
+### 자세한 내용은 아래 파일 확인.
 
-(550, 256, 256, 256, 1) # __Train data shape__  
-(50, 256, 256, 256, 1) # __Validation data shape__  
-(94, 256, 256, 256, 1) # __Test data shape__  
+[2021년 대한전자공학회 하계학술대회](https://drive.google.com/file/d/1DUi_a2rvAgi21ji3pNr5H6ZQ9cSARquX/view?usp=sharing)
 
-## 2. 데이터 전처리
-딥러닝 모델에 넣어주기 위해 모든 영상의 크기를 일정하게 통일함.  
-
-SPM 패키지를 이용하여 영상 데이터의 크기를 __표준뇌 참조 영상__ 과 같아지도록 **Reslice**하여 준비함.  
-(표준뇌 영상 크기: 복셀 사이즈 1 x 1 x 1 mm3, 크기 256 x 256 x 256).
-
-PET영상은 주입한 방사성 물질의 양, 주입한 시간 등에 따라서 영상의 강도가 매우 달라지는 특성이 있음.
-그러하여, PET 영상의 복셀 값 분포를 0에서 1사이의 값 (MinMaxScaler)으로 매핑하고, 강도 값(intensity)의 히스토그램을 분석하여 상위 99% 이상은 99%의 값으로 처리하는 intensity cropping을 시행함[그림 1].  
-
-<p align="center"><img src = "./PVC_img/intensity_cropping.png" width="70%" height="70%"></center></>
-<p align="center">* [그림 1] 특정 이미지의 (a) 원래 이미지의 복셀 값 범위, (b) intensity cropping을 실시하여 보정한 이미지의 복셀 값 범위 *</center></>
-
-<p align="center"><img src = "./PVC_img/data_preprocess.png" width="100%" height="100%"></center></>
-<p align="center">* [그림 2] 데이터 전처리 전체 흐름도 *</center></>  
-
-## 3. 딥러닝 모델, 3D-ResUnet
-본 연구에서는 사용한 **3D-ResUnet [그림 3]** 은 [패치 기반(patch-based)](https://github.com/wjh1065/3D-Patch-Based-Training) [그림 4]으로 변형하여 사용함.  
-
-<p align="center"><img src = "./PVC_img/used_model.png" width="70%" height="70%"></center></>
-<p align="center">* [그림 3] 3D-ResUnet의 구조 도식화 *</center></>  
+[2021년 OHBM poster 발표](https://drive.google.com/file/d/1WxfQTBUNqNVi1C0ccTvI-YtAq4s6_uJc/view?usp=sharing)
 
 
-<p align="center"><img src = "./PVC_img/example.png" width="70%" height="70%"></center></>
-<p align="center">* [그림 4] Patch 학습 예시 *</center></>  
 
-(550, 256, 256, 256, 1) -> (4400, 128, 128, 128, 1) # Train __*patch*__ data shape  
-(50, 256, 256, 256, 1) -> (400, 128, 128, 128, 1)   # Validation __*patch*__ data shape  
-(94, 256, 256, 256, 1) -> (752, 128, 128, 128, 1)   # Test __*patch*__ data shape  
+### 특허 출원
 
-## 4. 학습 방법
-"PVC 처리 전 PET 영상 데이터"를 __입력 데이터__ 로 사용하였고, "PVC 처리 후 PET 영상 데이터"는 __정답 데이터__ 로 사용하여 학습을 진행함.  
-
-최소제곱에러(Mean Square Error, MSE, 식 (1))를 손실함수로 사용하여, 입력 데이터와 정답 데이터간의 차이를 줄이도록 함.  
-
-<p align="center"><img src = "./PVC_img/mse.png" width="30%" height="30%"></center></>
-<p align="center">* [식 1] 최소제곱에러 공식 *</center></>  
-
-
-본 연구에서는 패치를 이용하여 한 사람의 영상을 8개의 패치(각 영상의 실제 크기: 128 x 128 x 128 voxels)로 나누고, 미니배치의 크기(batch size)를 4로 하였으며, 총 300번의 에폭(epoch) 동안 학습을 진행하였다. 최적화 알고리즘(optimizer)는 Adam을 사용했다.  
-
-모든 구현은 유닉스 상(Ubuntu 18.04.5 LTS)의 Python 버전 3.8.8에서 구글 텐서플로우 (TensorFlowTM) 버전 2.5.0, 케라스(Keras) 버전 2.5.0으로 구현되었다. 학습에 사용된 하드웨어 정보는 다음과 같다 (CPU: Intel i7-6700@3.4GHz, GPU: Nvidia RTX 3090 24GB, memory: 48GB).
-
-## 5. 정량적 평가 방법
-모델의 평가 방법은 정답 데이터와의 유사성을 비교하는 __구조적 유사 지수(Structural Similarity Index, SSIM, 식(2))__ 와 정답 데이터간의 오차율을 확인하는 __평균 제곱근 오차(Root Mean Square Error, RMSE, 식(3))__ 를 이용함.
-
-<p align="center"><img src = "./PVC_img/ssim.png" width="50%" height="50%"></center></>
-<p align="center">* [식 2] 구조적 유사 지수 공식 *</center></>  
-
-<p align="center"><img src = "./PVC_img/rmse.png" width="35%" height="35%"></center></>
-<p align="center">* [식 3] 평균 제곱근 오차 공식 *</center></>  
-
-이전의 선행연구가 없으므로, 비교할 기준모델 (baseline model)로는 SciPy 패키지의 선명화 효과 필터(sharpen filter)를 사용함.  
-
-## 6.  실험결과 및 결론
-그림 5는 최종 모델의 학습 곡선을 보여줌.  과적합을 막기 위해 검증 데이터에서의 손실이 더 이상 증가하지 않는 정도에서 학습을 멈춤.  
-<p align="center"><img src = "./PVC_img/graph.png" width="50%" height="50%"></center></>
-<p align="center">* [그림 5] ADNI 데이터에 대해 3D-ResUnet의 학습 및 검증 손실 그래프 *</center></> 
-
-그림 6은 ADNI 테스트 데이터 첫번째 영상을 예시로 그린 것임.  
-<p align="center"><img src = "./PVC_img/result_fig.png" width="100%" height="100%"></center></>
-<p align="center">* [그림 6] 테스트 데이터에서의 모델 처리결과 예시 *</center></>
-<p align="center">* (입력 영상, 선명화 효과 필터의 결과 영상, 3D-ResUnet의 결과 영상, SPM으로 처리된 정답 영상) *</center></>  
-
-표 1은 ADNI 테스트 데이터에서 모델들의 정량적 성능 평가를 보여줌.  
-<p align="center"><img src = "./PVC_img/result_table_ver2.png" width="80%" height="80%"></center></>
-<p align="center">* [표 1] ADNI 테스트 데이터에서 모델들의 정량적 성능 평가 *</center></>
-
-SPM을 통한 PVC 과정은 영상분할 작업 10분, GTM 방법 90분, MG 방법 10분이 소요됨.  
-본 연구에서 제안한 방법은 영상분할 작업은 제외하고 GTM과 MG 방법을 딥러닝 알고리즘으로 대체함.  
-한 사람당 처리시간은 평균 5.4초로 SPM처리 보다 1100배가량 빠른 처리 속도를 보여줌.  
-
-### 발표
-
-[2021년 대한전자공학회 하계학술대회](https://drive.google.com/file/d/1DUi_a2rvAgi21ji3pNr5H6ZQ9cSARquX/view?usp=sharing)  
-[2021년 OHBM poster 발표](https://drive.google.com/file/d/1WxfQTBUNqNVi1C0ccTvI-YtAq4s6_uJc/view?usp=sharing)  
-
+[발명의 명칭] : PET 영상 신호 부분 용적 효과 보정 알고리즘
+[출원번호] : Secret Num
+[출원인] : 고려대학교 세종산학협련단
+[발명자] : 한철, 정병창, 이창석
