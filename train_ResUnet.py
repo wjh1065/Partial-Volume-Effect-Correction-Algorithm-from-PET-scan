@@ -14,7 +14,7 @@ import gc
 
 
 # 훈련 시작 및 종료 텔레그램 봇 실행
-lcs_token = '1598459890:AAEEMip5BnlOU_XTqFRD8T6gD5q2ZUtHsLE'
+lcs_token = '...'
 lcs = telegram.Bot(token = lcs_token)
 
 # 모델, 그래프, csv 파일 이름 설정하기
